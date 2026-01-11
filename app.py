@@ -5,7 +5,8 @@ import os
 app = Flask(__name__)
 
 # ===== CONFIG =====
-GROQ_API_KEY = os.getenv("GROQ_API_KEY") or "YOUR_GROQ_KEY_HERE"
+# Hardcoded Groq API key
+GROQ_API_KEY = "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"
 MODEL = "llama3-70b-8192"
 
 SYSTEM_PROMPT = """
@@ -23,16 +24,161 @@ UI_SETTINGS = {
     "font_size": 16
 }
 
+# Background gallery
 BG_GALLERY = [
     "https://ih1.redbubble.net/image.5841016001.5391/bg,f8f8f8-flat,750x,075,f-pad,750x1000,f8f8f8.u2.jpg",
     "https://i.pinimg.com/originals/1e/7b/99/1e7b99f7a1f3dbec.jpg",
     "https://i.pinimg.com/originals/d3/47/88/d3478894e43b9a7a.jpg"
 ]
 
+# Forsaken 1x logo
 LOGO_URL = "https://i.ibb.co/7gS6Xw7/forsaken1x.png"
 
 # ===== HTML/UI =====
-HTML = """ (Keep your HTML same as previous version, replace {bg}, {font_size}, {logo} etc.) """
+HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ULTRA GPT</title>
+<style>
+body {
+  margin: 0;
+  font-family: system-ui;
+  display: flex;
+  transition: background 0.3s;
+  background: {bg} no-repeat center/cover;
+  color: {text_color};
+}
+#sidebar {
+  width: 250px;
+  background: {sidebar_bg};
+  padding: 10px;
+}
+#newChat, #openSettings {
+  width: 100%;
+  padding: 12px;
+  background: #444;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+#chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  height: 140px;
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow: 0 0 10px black;
+  background: url('{bg}') center/cover no-repeat;
+}
+header img { height: 80px; margin-right: 10px; }
+#messages {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  font-size: {font_size}px;
+}
+.msg { margin-bottom: 16px; white-space: pre-wrap; }
+.user { color: #9cdcfe; }
+.bot { color: #dcdcaa; }
+#inputBox { display: flex; padding: 12px; background: #40414f; }
+input { flex: 1; padding: 12px; font-size: 16px; border: none; outline: none; }
+button { background: #19c37d; border: none; padding: 12px; cursor: pointer; }
+#settingsPanel { display: none; padding: 10px; background: #2a2b2f; color: white; }
+#settingsPanel label { display: block; margin-top: 6px; }
+#bgGallery img { width: 60px; margin: 4px; cursor: pointer; border: 2px solid transparent; }
+#bgGallery img.selected { border-color: #19c37d; }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <button id="newChat">+ New Chat</button>
+  <button id="openSettings">Settings</button>
+  <div id="settingsPanel">
+    <label>Theme:
+      <select id="themeSelect">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </label>
+    <label>Font Size:
+      <input type="number" id="fontSize" min="12" max="28" value="{font_size}">
+    </label>
+    <label>Background:</label>
+    <div id="bgGallery">{bg_imgs}</div>
+    <label>Edit SYSTEM_PROMPT:</label>
+    <textarea id="sysPrompt" rows="5" style="width:100%">{system_prompt}</textarea>
+    <button id="saveSettings">Save Settings</button>
+  </div>
+</div>
+<div id="chat">
+  <header>
+    <img src="{logo}" alt="ULTRA GPT Logo"/>
+    ULTRA GPT
+  </header>
+  <div id="messages"></div>
+  <div id="inputBox">
+    <input id="input" placeholder="Message ULTRA GPT..."/>
+    <button onclick="send()">Send</button>
+  </div>
+</div>
+<script>
+function add(role, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + role;
+  d.textContent = (role==="user"?"You: ":"ULTRA GPT: ") + text;
+  document.getElementById("messages").appendChild(d);
+  d.scrollIntoView();
+}
+async function send() {
+  const i = document.getElementById("input");
+  if(!i.value) return;
+  add("user", i.value);
+  const r = await fetch("/chat", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({message:i.value})
+  });
+  const j = await r.json();
+  add("bot", j.reply);
+  i.value="";
+}
+document.getElementById("newChat").onclick = async ()=>{
+  await fetch("/reset",{method:"POST"});
+  document.getElementById("messages").innerHTML="";
+};
+document.getElementById("openSettings").onclick = ()=>{
+  const p = document.getElementById("settingsPanel");
+  p.style.display = (p.style.display==="none"?"block":"none");
+};
+document.getElementById("saveSettings").onclick = async ()=>{
+  const theme=document.getElementById("themeSelect").value;
+  const font=parseInt(document.getElementById("fontSize").value);
+  const bg=document.querySelector("#bgGallery img.selected")?.src || "";
+  const sys=document.getElementById("sysPrompt").value;
+  await fetch("/settings", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({theme,font,bg,sys})
+  });
+  location.reload();
+};
+document.querySelectorAll("#bgGallery img").forEach(img=>{
+  img.onclick = ()=>{document.querySelectorAll("#bgGallery img").forEach(i=>i.classList.remove("selected")); img.classList.add("selected");};
+});
+</script>
+</body>
+</html>
+"""
 
 bg_imgs_html = "".join([f'<img src="{b}"/>' for b in BG_GALLERY])
 
@@ -68,7 +214,6 @@ def chat():
     messages.append({"role":"user","content":user_msg})
 
     try:
-        # === Updated Groq endpoint ===
         res = requests.post(
             "https://api.groq.com/v1/llm/completions",
             headers={
@@ -80,10 +225,9 @@ def chat():
                 "input": "\n".join([m["content"] for m in messages]),
                 "max_output_tokens": 500
             },
-            timeout=20
+            timeout=30
         )
         data = res.json()
-        # Groq responses usually return 'content'
         reply = data.get("content","No reply from server")
     except Exception as e:
         reply = "Server error: " + str(e)
