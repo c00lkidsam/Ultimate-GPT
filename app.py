@@ -5,17 +5,14 @@ import os
 app = Flask(__name__)
 
 # ===== CONFIG =====
-# Hardcoded Groq API key
 GROQ_API_KEY = "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"
 MODEL = "llama3-70b-8192"
 
-SYSTEM_PROMPT = """
-You are ULTRA GPT.
+SYSTEM_PROMPT = """You are ULTRA GPT.
 You understand typos, simplify answers, explain clearly,
-and respond intelligently like ChatGPT mixed with Gronk-level reasoning.
-"""
+and respond intelligently like ChatGPT mixed with Gronk-level reasoning."""
 
-messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+messages = []
 
 # Default UI settings
 UI_SETTINGS = {
@@ -204,14 +201,20 @@ def home():
 @app.route("/reset", methods=["POST"])
 def reset():
     global messages
-    messages = [{"role":"system","content":SYSTEM_PROMPT}]
+    messages.clear()
     return jsonify({"ok": True})
 
 @app.route("/chat", methods=["POST"])
 def chat():
     global messages
     user_msg = request.json.get("message","")
-    messages.append({"role":"user","content":user_msg})
+    messages.append(user_msg)
+
+    payload = {
+        "model": MODEL,
+        "input": SYSTEM_PROMPT + "\nUser: " + "\n".join(messages),
+        "max_output_tokens": 500
+    }
 
     try:
         res = requests.post(
@@ -220,11 +223,7 @@ def chat():
                 "Authorization": f"Bearer {GROQ_API_KEY}",
                 "Content-Type": "application/json"
             },
-            json={
-                "model": MODEL,
-                "input": "\n".join([m["content"] for m in messages]),
-                "max_output_tokens": 500
-            },
+            json=payload,
             timeout=30
         )
         data = res.json()
@@ -232,20 +231,20 @@ def chat():
     except Exception as e:
         reply = "Server error: " + str(e)
 
-    messages.append({"role":"assistant","content":reply})
+    messages.append(reply)
     return jsonify({"reply": reply})
 
 @app.route("/settings", methods=["POST"])
 def settings():
-    global UI_SETTINGS, SYSTEM_PROMPT
+    global UI_SETTINGS, SYSTEM_PROMPT, messages
     d = request.json
     UI_SETTINGS["theme"] = d.get("theme","dark")
     UI_SETTINGS["font_size"] = d.get("font",16)
     if d.get("bg"): UI_SETTINGS["bg"] = d["bg"]
-    SYSTEM_PROMPT = d.get("sys", SYSTEM_PROMPT)
+    SYSTEM_PROMPT = d.get("sys",SYSTEM_PROMPT)
     messages.clear()
-    messages.append({"role":"system","content":SYSTEM_PROMPT})
     return jsonify({"ok": True})
 
 if __name__=="__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT",5000)))
+
