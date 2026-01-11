@@ -30,6 +30,9 @@ BG_GALLERY = [
     "https://i.pinimg.com/originals/d3/47/88/d3478894e43b9a7a.jpg"
 ]
 
+# Forsaken 1x logo
+LOGO_URL = "https://i.ibb.co/7gS6Xw7/forsaken1x.png"  # Replace with your Forsaken 1x PNG link
+
 # ===== HTML/UI =====
 HTML = """
 <!DOCTYPE html>
@@ -68,14 +71,15 @@ body {
 }
 header {
   height: 140px;
-  background: url('{bg}') center/cover no-repeat;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   padding: 15px;
   font-size: 28px;
   font-weight: bold;
   text-shadow: 0 0 10px black;
+  background: url('{bg}') center/cover no-repeat;
 }
+header img { height: 80px; margin-right: 10px; }
 #messages {
   flex: 1;
   padding: 20px;
@@ -116,7 +120,10 @@ button { background: #19c37d; border: none; padding: 12px; cursor: pointer; }
   </div>
 </div>
 <div id="chat">
-  <header>ULTRA GPT</header>
+  <header>
+    <img src="{logo}" alt="ULTRA GPT Logo"/>
+    ULTRA GPT
+  </header>
   <div id="messages"></div>
   <div id="inputBox">
     <input id="input" placeholder="Message ULTRA GPT..."/>
@@ -189,7 +196,8 @@ def home():
         sidebar_bg=sidebar_bg,
         font_size=font_size,
         system_prompt=SYSTEM_PROMPT,
-        bg_imgs=bg_imgs_html
+        bg_imgs=bg_imgs_html,
+        logo=LOGO_URL
     )
 
 @app.route("/reset", methods=["POST"])
@@ -211,9 +219,20 @@ def chat():
             timeout=20
         )
         data=res.json()
-        reply=data.get("choices",[{}])[0].get("message",{}).get("content","No reply")
+        # Groq-compatible reply parsing
+        reply = ""
+        if "choices" in data and len(data["choices"])>0:
+            choice = data["choices"][0]
+            if "message" in choice and "content" in choice["message"]:
+                reply = choice["message"]["content"]
+            elif "content" in choice:
+                reply = choice["content"]
+            else:
+                reply = "No reply from server"
+        else:
+            reply = "No reply from server"
     except Exception as e:
-        reply="Server error: "+str(e)
+        reply = "Server error: "+str(e)
     messages.append({"role":"assistant","content":reply})
     return jsonify({"reply":reply})
 
