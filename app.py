@@ -4,186 +4,190 @@ import os
 
 app = Flask(__name__)
 
-# Use your OpenAI API key (replace with your key or use env variable)
-API_KEY = os.getenv("OPENAI_API_KEY", "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").strip()
+# ===== CONFIG =====
+OPENAI_API_KEY = os.getenv("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")  # <-- PATCHED
+MODEL = "gpt-3.5-turbo"
+
+if not OPENAI_API_KEY:
+    raise RuntimeError("OPENAI_API_KEY environment variable not set")
 
 SYSTEM_PROMPT = """
-You are Sam GPT, a highly intelligent AI assistant.
-- Can understand typos and simplify language.
-- Can explain concepts, code, research, and reason like Gronk.
-- Very friendly, clear, helpful.
-- NEVER respond with NSFW or hate content.
+You are ULTRA GPT.
+You understand typos, simplify answers, explain clearly,
+and respond intelligently like ChatGPT mixed with Gronk-level reasoning.
 """
 
 messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-MAX_MESSAGES = 15
 
-HAWK_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/1/12/Hawk_icon.png"
+LOGO_BG = "https://ih1.redbubble.net/image.5841016001.5391/bg,f8f8f8-flat,750x,075,f-pad,750x1000,f8f8f8.u2.jpg"
 
-HTML_UI = f"""
+# ===== UI =====
+HTML = f"""
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Sam GPT Pro Gronk</title>
+<title>ULTRA GPT</title>
 <style>
 body {{
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #0a0a0a;
-  color: #fff;
+  margin: 0;
+  font-family: system-ui;
+  background: #343541;
+  color: white;
+  display: flex;
+}}
+#sidebar {{
+  width: 220px;
+  background: #202123;
+  padding: 10px;
+}}
+#newChat {{
+  width: 100%;
+  padding: 12px;
+  background: #444;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+}}
+#chat {{
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 10px;
 }}
-#header {{
+header {{
+  height: 140px;
+  background: url('{LOGO_BG}') center/cover no-repeat;
   display: flex;
-  align-items: center;
-  margin-bottom: 10px;
+  align-items: flex-end;
+  padding: 15px;
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow: 0 0 10px black;
 }}
-#logo {{ width: 50px; height: 50px; margin-right: 10px; }}
-#title {{ font-size: 24px; font-weight: bold; color: #00c6ff; }}
-#chat {{
-  max-width: 600px;
-  width: 100%;
-  height: 70vh;
+#messages {{
+  flex: 1;
+  padding: 20px;
   overflow-y: auto;
-  padding: 10px;
-  background: #1a1a1a;
-  border-radius: 10px;
-  box-shadow: 0 0 25px rgba(0,255,255,0.3);
 }}
-.message {{
-  padding: 12px;
-  margin: 6px 0;
-  border-radius: 12px;
-  max-width: 80%;
-  word-wrap: break-word;
-  font-size: 16px;
+.msg {{
+  margin-bottom: 16px;
+  white-space: pre-wrap;
 }}
-.user {{
-  background: linear-gradient(120deg, #ff6a00, #ee0979);
-  text-align: right;
-  color: #fff;
-  margin-left: auto;
-}}
-.bot {{
-  background: linear-gradient(120deg, #00c6ff, #0072ff);
-  text-align: left;
-  color: #fff;
-  margin-right: auto;
-}}
-#input-area {{
+.user {{ color: #9cdcfe; }}
+.bot {{ color: #dcdcaa; }}
+#inputBox {{
   display: flex;
-  margin-top: 10px;
-  width: 100%;
-  max-width: 600px;
+  padding: 12px;
+  background: #40414f;
 }}
-#userInput {{
+input {{
   flex: 1;
   padding: 12px;
-  border-radius: 8px 0 0 8px;
+  font-size: 16px;
   border: none;
   outline: none;
-  font-size: 16px;
 }}
 button {{
-  padding: 12px;
-  background: #ff6a00;
+  background: #19c37d;
   border: none;
-  color: #fff;
-  font-weight: bold;
+  padding: 12px;
   cursor: pointer;
-  border-radius: 0 8px 8px 0;
-  transition: all 0.2s ease;
 }}
-button:hover {{ background: #ee0979; }}
-::-webkit-scrollbar {{ width: 8px; }}
-::-webkit-scrollbar-thumb {{ background: #ff6a00; border-radius: 4px; }}
 </style>
 </head>
+
 <body>
-<div id="header">
-  <img src="{HAWK_LOGO_URL}" alt="Hawk Logo" id="logo">
-  <div id="title">Sam GPT Pro Gronk</div>
+<div id="sidebar">
+  <button id="newChat">+ New Chat</button>
 </div>
-<div id="chat"></div>
-<div id="input-area">
-  <input type="text" id="userInput" placeholder="Type your message...">
-  <button>Send</button>
+
+<div id="chat">
+  <header>ULTRA GPT</header>
+  <div id="messages"></div>
+  <div id="inputBox">
+    <input id="input" placeholder="Message ULTRA GPT..." />
+    <button onclick="send()">Send</button>
+  </div>
 </div>
+
 <script>
-window.onload = function() {{
-  async function sendMessage() {{
-    const input = document.getElementById("userInput");
-    const message = input.value;
-    if(!message) return;
-    addMessage(message,'user');
-    input.value='';
-    try {{
-      const res = await fetch('/chat', {{
-        method:'POST',
-        headers:{{'Content-Type':'application/json'}},
-        body: JSON.stringify({{message}})
-      }});
-      const data = await res.json();
-      addMessage(data.reply,'bot');
-    }} catch(err) {{
-      addMessage("Server error, try again later.","bot");
-    }}
-  }}
-  function addMessage(msg,type){{
-    const chat = document.getElementById("chat");
-    const div = document.createElement("div");
-    div.textContent = msg;
-    div.className = "message " + type;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-  }}
-  document.querySelector("button").onclick = sendMessage;
-  document.getElementById("userInput").onkeypress = function(e){{
-    if(e.key==='Enter') sendMessage();
-  }}
+function add(role, text) {{
+  const d = document.createElement("div");
+  d.className = "msg " + role;
+  d.textContent = (role === "user" ? "You: " : "ULTRA GPT: ") + text;
+  document.getElementById("messages").appendChild(d);
+  d.scrollIntoView();
 }}
+
+async function send() {{
+  const i = document.getElementById("input");
+  if (!i.value) return;
+  add("user", i.value);
+
+  const r = await fetch("/chat", {{
+    method: "POST",
+    headers: {{ "Content-Type": "application/json" }},
+    body: JSON.stringify({{ message: i.value }})
+  }});
+
+  const j = await r.json();
+  add("bot", j.reply);
+  i.value = "";
+}}
+
+document.getElementById("newChat").onclick = async () => {{
+  await fetch("/reset", {{ method: "POST" }});
+  document.getElementById("messages").innerHTML = "";
+}};
 </script>
 </body>
 </html>
 """
 
+# ===== ROUTES =====
 @app.route("/")
 def home():
-    return render_template_string(HTML_UI)
+    return render_template_string(HTML)
+
+@app.route("/reset", methods=["POST"])
+def reset():
+    global messages
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    return jsonify({"ok": True})
 
 @app.route("/chat", methods=["POST"])
 def chat():
     global messages
-    user_input = request.json.get("message", "")
-    messages.append({"role":"user","content":user_input})
+    user_msg = request.json.get("message", "")
+    messages.append({"role": "user", "content": user_msg})
 
-    if len(messages) > MAX_MESSAGES:
-        messages = [messages[0]] + messages[-(MAX_MESSAGES-1):]
+    try:
+        res = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": MODEL,
+                "messages": messages
+            },
+            timeout=20
+        )
 
-    if not API_KEY:
-        reply = "⚠️ API key not found. Add your key in Render Environment Variables."
-    else:
-        try:
-            resp = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {API_KEY}",
-                         "Content-Type": "application/json"},
-                json={"model":"gpt-3.5-turbo","messages":messages},
-                timeout=10
-            )
-            data = resp.json()
-            if "error" in data:
-                reply = f"OpenAI Error: {data['error']['message']}"
-            else:
-                reply = data["choices"][0]["message"]["content"]
-        except Exception as e:
-            reply = f"Server error: {str(e)}"
+        data = res.json()
 
-    messages.append({"role":"assistant","content":reply})
-    return jsonify({"reply":reply})
+        if "error" in data:
+            reply = "OpenAI error: " + data["error"].get("message", "Unknown error")
+        else:
+            reply = data["choices"][0]["message"]["content"]
 
-if __name__=="__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT",5000)))
+    except Exception as e:
+        reply = "Server error: " + str(e)
+
+    messages.append({"role": "assistant", "content": reply})
+    return jsonify({"reply": reply})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
