@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template_string
 import requests
+import os  # Fix for NameError
 
 app = Flask(__name__)
 
@@ -134,7 +135,7 @@ def chat():
     user_msg = request.json.get("message","")
     messages.append(user_msg)
 
-    # Groq expects 'input' as one string
+    # Groq API call
     payload = {
         "model": MODEL,
         "input": SYSTEM_PROMPT + "\n" + "\n".join(messages),
