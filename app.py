@@ -5,11 +5,10 @@ import os
 app = Flask(__name__)
 
 # ===== CONFIG =====
-OPENAI_API_KEY = os.getenv("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")  # <-- PATCHED
-MODEL = "gpt-3.5-turbo"
+# Safe fallback: will use the key below if environment variable not set
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "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"
 
-if not OPENAI_API_KEY:
-    raise RuntimeError("OPENAI_API_KEY environment variable not set")
+MODEL = "gpt-3.5-turbo"
 
 SYSTEM_PROMPT = """
 You are ULTRA GPT.
