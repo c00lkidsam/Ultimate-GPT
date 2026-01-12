@@ -1,23 +1,23 @@
+# app.py
 from flask import Flask, request, jsonify, render_template_string
 import requests
-import os  # Fix for NameError
+import os
 
 app = Flask(__name__)
 
 # ===== CONFIG =====
-GROQ_API_KEY = "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"
+GROQ_API_KEY = os.environ.get("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")  # Read key from Vercel environment
 MODEL = "llama3-70b-8192"
 
-SYSTEM_PROMPT = """You are ULTRA GPT, a super-intelligent AI. 
-- Understand typos and simplify or clarify anything.
-- Provide answers like a well-researched assistant.
-- Be witty, clear, and concise.
-- Explain things like a teacher would, and structure replies well."""
+SYSTEM_PROMPT = """You are ULTRA GPT, a super-intelligent AI.
+- Understand typos and simplify explanations
+- Answer clearly and concisely
+- Explain like a teacher
+- Be witty and helpful"""
 
-# Chat history
 messages = []
 
-# UI Defaults
+# ===== UI Settings =====
 UI_SETTINGS = {
     "theme": "dark",
     "bg": "https://ih1.redbubble.net/image.5841016001.5391/bg,f8f8f8-flat,750x,075,f-pad,750x1000,f8f8f8.u2.jpg",
@@ -30,7 +30,7 @@ BG_GALLERY = [
     "https://i.pinimg.com/originals/d3/47/88/d3478894e43b9a7a.jpg"
 ]
 
-LOGO_URL = "https://i.ibb.co/7gS6Xw7/forsaken1x.png"
+LOGO_URL = "https://i.ibb.co/7gS6Xw7/forsaken1x.png"  # Forsaken 1x logo
 
 # ===== HTML/UI =====
 HTML = """
@@ -135,7 +135,9 @@ def chat():
     user_msg = request.json.get("message","")
     messages.append(user_msg)
 
-    # Groq API call
+    if not GROQ_API_KEY:
+        return jsonify({"reply":"Error: GROQ_API_KEY not set in environment."})
+
     payload = {
         "model": MODEL,
         "input": SYSTEM_PROMPT + "\n" + "\n".join(messages),
